@@ -1,0 +1,48 @@
+SRCDIR = ./src/
+
+CC          = gcc
+CFLAGS      = -g
+#-O9
+
+
+
+all: Run_queries.o basics.o bitrankw32int.o dacs.o
+	$(CC) $(CFLAGS) -o EXE  run_queries.o create_index.o auxiliary.o count_locate.o bmestatico.o basics.o bitrankw32int.o dacs.o -lm	
+	rm *.o
+
+Run_queries.o: create_index.o auxiliary.o count_locate.o bmestatico.o interface.o
+	$(CC) $(CFLAGS) -c run_queries.c -o run_queries.o
+
+create_index.o:    
+	$(CC) $(CFLAGS) -c create_index.c -o create_index.o
+auxiliar.o:
+	$(CC) $(CFLAGS) -c auxiliary.c -o auxiliary.o
+
+count_locate.o:
+	$(CC) $(CFLAGS) -c count_locate.c -o count_locate.o
+
+bmestatico.o:
+	$(CC) $(CFLAGS) -c BMestatico.c -o bmestatico.o
+	
+interface.o:
+	$(CC) $(CFLAGS) -c interface.h -o interface.o	
+	
+	
+	
+#test:   basics.o bitrankw32int.o dacs.o
+#	$(CC) $(CFLAGS) basics.o bitrankw32int.o dacs.o -c $(SRCDIR)/test.c  
+	
+dacs.o:  basics.o bitrankw32int.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)dacs.c
+
+bitrankw32int.o: 
+	$(CC) $(CFLAGS) -c $(SRCDIR)bitrankw32int.c
+	
+basics.o: basics.c
+	$(CC) $(CFLAGS) -c $(SRCDIR)basics.c
+	
+basics.c: basics.h
+#	touch $(SRCDIR)/$(SRCDIRUTILS)/basics.c	
+
+basics.h: 
+#	touch $(SRCDIR)/$(SRCDIRUTILS)/basics.h
