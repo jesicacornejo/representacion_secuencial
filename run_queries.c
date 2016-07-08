@@ -12,6 +12,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include <time.h>
+
 
 
 #include "interface.h"
@@ -178,12 +180,18 @@ void do_count (char *filename_dat, char *file_name_result_query)//
 //void do_count ()
 {
 
-
+	double fc_total_time;
 
 	int error = 0;
 	ulong numocc, length, tot_numocc = 0, numpatt, res_patt, pagefaults;
 	unsigned long pagefaults_full=0; // --------pagefaults, pagefaults_full utilizada para guardar la cantidad de paginas de disco consultadas
 	double time, tot_time = 0;
+
+// >>>>>>>>>>>>>>> vbles para medir tiempo de ejecucion de findclose y count.
+	clock_t t_ini_count, t_fin_count;
+	double tot_time_count=0, parametro_time = 0;
+// <<<<<<<<<<<<<<< vbles para medir tiempo de ejecucion de findclose y count.
+
 	uchar *pattern;
 
 	struct rusage usage;  //--------------Modificaciones para saber si va a disco cuando realiza el count-------//
@@ -221,7 +229,7 @@ void do_count (char *filename_dat, char *file_name_result_query)//
 				char lote_texto_buscar[512];
 
 				//strcpy(lote_texto_buscar,"lotes/Patt_L");
-				strcpy(lote_texto_buscar,"/home/dario/tesis_area_trabajo/datos-de-entrada/");
+				strcpy(lote_texto_buscar,"/home/jesica/Documentos/entrada/");
 				strcat(lote_texto_buscar,tipo);
 				strcat(lote_texto_buscar,tamanio_mb);
 				strcat(lote_texto_buscar,"mb/Patt_L");
@@ -300,8 +308,14 @@ void do_count (char *filename_dat, char *file_name_result_query)//
 
 	//#################################################################
 	//##############COUNT##############################################
-		error = count (Index, pattern, length, &numocc, f_text);
+
+		t_ini_count = clock();
+		error = count(Index, &parametro_time, pattern, length, &numocc, f_text);
+		t_fin_count = clock();
+		tot_time_count += (double)(t_fin_count - t_ini_count) / CLOCKS_PER_SEC;
+
 		IFERROR (error);
+		//cout << "total find_close = %.4f" << (fc_total_time*1000);
 
 	
 		//if (Verbose) {
@@ -309,7 +323,16 @@ void do_count (char *filename_dat, char *file_name_result_query)//
 			//fwrite(pattern, sizeof(*pattern), length, stdout);
 			//fwrite(&numocc, sizeof(numocc), 1, stdout);
 			//}
+//>>>>>>>>>>>>>>>>>>>>> para imprimir tiempos de ejecucion
+//		printf("find_close total time: %.4f\n", (parametro_time*1000.0));
+//		printf("count total time: %.4f\n", (tot_time_count*1000.0));
+		printf("find_close total time: %.16g milisegundos\n", (parametro_time * 1000.0));
+		printf("count total time: %.16g milisegundos\n", tot_time_count * 1000.0);
 		tot_time += (getTime () - time);
+		printf("Old count total time: %.16g\n", (tot_time*1000.0));
+		printf("-------------------------------------------------------\n");
+//<<<<<<<<<<<<<<<<<<<<<< para imprimir tiempos de ejecucion
+
 		tot_numocc += numocc;
 		res_patt--;
 
@@ -334,14 +357,14 @@ void do_count (char *filename_dat, char *file_name_result_query)//
 		FILE *f_count_result;
 		f_count_result = fopen(file_name_result_query, "a+" );
 
-if(!f_count_result)
+		if(!f_count_result)
 			error("No se abrio el archivo de resultados para COUNT");
 
 	//------------FIN Apertura del archivo que contiene el Texto---------------------//
    //------------##############################################---------------------//
 
 
-
+		printf("count total time: %.4f\n", (tot_time*100));
 		fprintf(f_count_result,"%d\t%d\t%lu\t%f\t%.4f\t%.4f\n",long_patron, cant_string,tot_numocc,nro_medio_ocurrencia,(tot_time * 1000) / (numpatt),tot_time*1000);
 		//fprintf (stderr, "%d\t%d\t%lu\t%f\t%.4f\t%.4f\n", long_patron, cant_string,tot_numocc,nro_medio_ocurrencia,(tot_time * 1000) / (numpatt),tot_time*1000);
 

@@ -1,4 +1,11 @@
 #include "common.h"
+#include <stdio.h>
+#include <time.h>
+
+/* only for getTime() */
+#include <sys/time.h>
+#include <sys/resource.h>
+
 
 extern byte RankTable[255];
 extern char MinExcessTable[255];
@@ -25,6 +32,23 @@ extern ulong s; //marca el nro de ulong que se toman de la estructura Rb (En nue
 
 ulong cursor_pos_term_raiz=0;
 
+double getTime_count (void)
+{
+
+    double cpu_time, sistime;
+    struct rusage usage_count;
+
+    getrusage (RUSAGE_SELF, &usage_count);
+
+    cpu_time = (double) usage_count.ru_utime.tv_sec +
+        (double) usage_count.ru_utime.tv_usec / 1000000.0;
+
+    sistime = (double) usage_count.ru_stime.tv_sec +
+        (double) usage_count.ru_stime.tv_usec / 1000000.0;
+
+    return (cpu_time + sistime);
+
+}
 
 ulong  FindClose( ulong *bitmap_ulong, ulong pos, ulong last, ulong *nroNodo, ulong *nroHoja)
 {
@@ -313,8 +337,7 @@ void loadCadena (char *cadena,int sizeCadena,FILE *f_text, ulong primer_hoja)
 count devuelve 0 (cero) en caso de haber encontrado alguna ocurrencia de la palabra "pattern" y 1 (uno) en caso contrario.
 */
 
-//int count(void *index, char *pattern, ulong length, ulong *numocc)
-int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
+int count(void *index, double find_close_time, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 {
 	//FILE *f_text;
 	ulong *saltos, *cant_hijos, *SA, cant_bit;
@@ -323,7 +346,10 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 	char *rotulos;
 	struc_index *index_common;
 
-
+	//------->>>>>> Para medir los tiempos
+	clock_t t_ini_fclose;
+	double time_acum_FindClose=0;
+	//-------<<<<<< Para medir los tiempos
 
 	index_common=index;
 	SA=&(*index_common->SA);
@@ -332,9 +358,6 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 	tree=&(*index_common->ptr_arr_parent);
 	rotulos=&(*index_common->rotulo_text);
 	saltos=&(*index_common->saltos);
-
-
-
 
 	char *cadena; //utilizada para leer una cadena del archivo f_text y compararla con "c"
 	ulong pos=0, pos_cierre=0, pos_anterior=0, primer_hoja=0;
@@ -356,9 +379,7 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 	{
 		if(pattern[indice_c]!=rotulos[indice_R])
 		{
-
 			pos_anterior=pos;
-
 
 			if(testigo_pos_term)
 			{
@@ -367,8 +388,18 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 				nroHoja=pos_term_raiz[cursor_pos_term_raiz++];
 			}
 			else
+			{
+				/*** Propuesta Dario **
+				t_ini_fclose = getTime_count();
 				pos=FindClose(bitmap_ulong, pos, cant_bit, &nroNodo, &nroHoja);
-
+				time_acum_FindClose += (getTime_count()- t_ini_fclose);
+				 */
+				/* Jesi con clock **/
+				t_ini_fclose = clock();
+				pos=FindClose(bitmap_ulong, pos, cant_bit, &nroNodo, &nroHoja);
+				time_acum_FindClose += ((double)(clock() - t_ini_fclose) / CLOCKS_PER_SEC);
+				/**/
+			}
 
 			//pos=FindClose(tree, pos, cant_bit, &nroNodo, &nroHoja);
 			if (pos_anterior!=pos-1) //Falso si consulto parado en un 1 correspondiente a una hoja
@@ -423,6 +454,7 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 			}
 		}
 	}
+	*find_close_time += time_acum_FindClose;
 
 	if(indice_c >= length)
 	{
@@ -432,11 +464,21 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 		cadena[length]='\0';
 		loadCadena (cadena,length,f_text,primer_hoja);
 
-
-
 		if(!strcmp(pattern,cadena)) //Si son iguales llamamos a FindClose para saber el nro de hojas que debo devolver
 		{
-			pos_cierre=FindClose (bitmap_ulong, pos-1, cant_bit, &nroNodo, &nroHoja);
+			/*** Propuesta Dario **
+			t_ini_fclose=getTime_count();
+			pos_cierre = FindClose (bitmap_ulong, pos-1, cant_bit, &nroNodo, &nroHoja);
+			*parametro_time += (getTime_count()- t_ini_fclose);
+			 */
+
+			/* Jesi con clock **/
+			t_ini_fclose = clock();
+			pos_cierre = FindClose (bitmap_ulong, pos-1, cant_bit, &nroNodo, &nroHoja);
+			(*find_close_time) += ((double)(clock() - t_ini_fclose) / CLOCKS_PER_SEC);
+			/**/
+
+
 			//pos_cierre=FindClose (tree, pos-1, cant_bit, &nroNodo, &nroHoja);
 			if(!nroHoja)
 				(*numocc)=1;
@@ -459,7 +501,6 @@ int count(void *index, char *pattern, ulong length, ulong *numocc, FILE *f_text)
 		//free(cadena);
 		return 0;
 	}
-
 
 }
 

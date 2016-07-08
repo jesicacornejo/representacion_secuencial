@@ -54,7 +54,7 @@ int index_size(void *index, ulong *size);
           pattern[0..length-1] found in the text indexed by index. */
 
 //int count (void *index, uchar *pattern, ulong length, ulong *numocc);
-int count (void *index, uchar *pattern, ulong length, ulong *numocc, FILE *file);
+int count (void *index, double find_close_time, uchar *pattern, ulong length, ulong *numocc, FILE *file);
 
         /* Writes in numocc the number of occurrences of the substring 
           pattern[0..length-1] in the text indexed by index. It also allocates
